@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>游戏模组收录站</title>
+    <!-- Material Icons 字体 -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://unpkg.com/mdui@2.0.3/mdui.css" rel="stylesheet">
+    <script src="https://unpkg.com/mdui@2.0.3/mdui.global.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        .mod-card {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            cursor: pointer;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .mod-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        
+        .hero-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 60px 20px;
+            text-align: center;
+            margin-top: -64px;
+            padding-top: 100px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+            margin: 40px 20px;
+        }
+        
+        .filter-section {
+            background: #f8f9fa;
+            padding: 24px;
+            border-radius: 12px;
+            margin: 20px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .search-bar {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .mod-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 24px;
+            padding: 20px;
+        }
+        
+        .tag-chip {
+            margin: 2px;
+            font-size: 12px;
+        }
+        
+        .fab-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 1000;
+        }
+        
+        .content-section {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .hero-section {
+                padding: 40px 20px;
+                padding-top: 80px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+                margin: 20px;
+                gap: 16px;
+            }
+            
+            .mod-grid {
+                grid-template-columns: 1fr;
+                padding: 20px 0;
+            }
+            
+            .filter-section {
+                margin: 20px 0;
+                padding: 16px;
+            }
+            
+            .filter-section > div {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .fab-container {
+                bottom: 16px;
+                right: 16px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .mod-grid {
+                grid-template-columns: 1fr;
+                padding: 0;
+            }
+        }
+        
+        /* 加载状态 */
+        .loading-spinner {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+        
+        .empty-state mdui-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <mdui-top-app-bar>
+        <mdui-button-icon icon="menu" onclick="toggleMenu()" title="菜单"></mdui-button-icon>
+        <div style="flex: 1;">游戏模组收录站</div>
+        <mdui-button-icon icon="search" onclick="focusSearch()" title="搜索"></mdui-button-icon>
+        <mdui-button-icon icon="notifications" onclick="showNotifications()" title="通知"></mdui-button-icon>
+        <mdui-avatar src="https://picsum.photos/seed/avatar/40/40.jpg" onclick="showUserMenu()" title="用户菜单"></mdui-avatar>
+    </mdui-top-app-bar>
+
+    <!-- 侧边菜单 -->
+    <mdui-drawer id="sideMenu" close-on-overlay-click>
+        <div style="padding: 20px;">
+            <mdui-typography variant="headline-large" style="margin-bottom: 24px;">菜单</mdui-typography>
+            
+            <mdui-list>
+                <mdui-list-item onclick="navigateToHome()">
+                    <mdui-icon slot="icon">home</mdui-icon>
+                    首页
+                </mdui-list-item>
+                <mdui-list-item onclick="navigateToAdmin()">
+                    <mdui-icon slot="icon">admin_panel_settings</mdui-icon>
+                    管理后台
+                </mdui-list-item>
+                <mdui-list-item onclick="showAbout()">
+                    <mdui-icon slot="icon">info</mdui-icon>
+                    关于
+                </mdui-list-item>
+            </mdui-list>
+            
+            <div style="margin-top: 32px;">
+                <mdui-typography variant="title-medium" style="margin-bottom: 16px;">分类浏览</mdui-typography>
+                <div id="menuCategories" style="display: flex; flex-direction: column; gap: 8px;">
+                    <!-- 分类将动态加载 -->
+                </div>
+            </div>
+        </div>
+    </mdui-drawer>
+
+    <!-- 通知面板 -->
+    <mdui-dialog id="notificationDialog" headline="通知">
+        <div style="padding: 20px;">
+            <div id="notificationList">
+                <div style="text-align: center; padding: 40px; color: #666;">
+                    <mdui-icon style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;">notifications_none</mdui-icon>
+                    <mdui-typography>暂无新通知</mdui-typography>
+                </div>
+            </div>
+        </div>
+        <mdui-button slot="action" onclick="closeNotifications()">关闭</mdui-button>
+    </mdui-dialog>
+
+    <!-- 用户菜单 -->
+    <mdui-dialog id="userMenuDialog" headline="用户菜单">
+        <div style="padding: 20px;">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <mdui-avatar src="https://picsum.photos/seed/avatar/80/80.jpg" style="width: 80px; height: 80px; margin-bottom: 12px;"></mdui-avatar>
+                <mdui-typography variant="title-medium">游客用户</mdui-typography>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <mdui-button onclick="goToFavorites()" icon="favorite" style="justify-content: flex-start;">
+                    我的收藏
+                </mdui-button>
+                <mdui-button onclick="goToUploads()" icon="upload" style="justify-content: flex-start;">
+                    我的上传
+                </mdui-button>
+                <mdui-button onclick="showSettings()" icon="settings" style="justify-content: flex-start;">
+                    设置
+                </mdui-button>
+                <mdui-button onclick="goToAdmin()" icon="admin_panel_settings" style="justify-content: flex-start;">
+                    管理后台
+                </mdui-button>
+            </div>
+        </div>
+        <mdui-button slot="action" onclick="closeUserMenu()">关闭</mdui-button>
+    </mdui-dialog>
+
+    <!-- 主要内容区域 -->
+    <main style="margin-top: 64px;">
+        <!-- Hero 区域 -->
+        <section class="hero-section">
+            <mdui-typography variant="headline-large" style="margin-bottom: 16px;">
+                发现精彩游戏模组
+            </mdui-typography>
+            <mdui-typography variant="title-medium" style="margin-bottom: 32px; opacity: 0.9;">
+                探索、分享、下载来自全球创作者的游戏模组
+            </mdui-typography>
+            
+            <!-- 搜索栏 -->
+            <div class="search-bar">
+                <mdui-text-field id="searchInput" placeholder="搜索模组..." icon="search" style="width: 100%;">
+                </mdui-text-field>
+            </div>
+        </section>
+
+        <!-- 统计数据 -->
+        <section style="padding: 40px 20px;">
+            <div class="stats-grid">
+                <mdui-card>
+                    <div style="padding: 20px; text-align: center;">
+                        <mdui-typography variant="display-small" id="totalMods">0</mdui-typography>
+                        <mdui-typography variant="body-large">模组总数</mdui-typography>
+                    </div>
+                </mdui-card>
+                <mdui-card>
+                    <div style="padding: 20px; text-align: center;">
+                        <mdui-typography variant="display-small" id="totalDownloads">0</mdui-typography>
+                        <mdui-typography variant="body-large">总下载量</mdui-typography>
+                    </div>
+                </mdui-card>
+                <mdui-card>
+                    <div style="padding: 20px; text-align: center;">
+                        <mdui-typography variant="display-small" id="totalGames">0</mdui-typography>
+                        <mdui-typography variant="body-large">支持游戏</mdui-typography>
+                    </div>
+                </mdui-card>
+            </div>
+        </section>
+
+        <!-- 筛选区域 -->
+        <section style="padding: 0 20px;">
+            <div class="filter-section">
+                <mdui-typography variant="headline-small" style="margin-bottom: 16px;">筛选条件</mdui-typography>
+                
+                <div style="display: flex; gap: 16px; flex-wrap: wrap; align-items: center;">
+                    <mdui-select id="gameFilter" placeholder="选择游戏">
+                        <mdui-menu-item value="">所有游戏</mdui-menu-item>
+                    </mdui-select>
+                    
+                    <mdui-select id="tagFilter" placeholder="选择标签">
+                        <mdui-menu-item value="">所有标签</mdui-menu-item>
+                    </mdui-select>
+                    
+                    <mdui-button onclick="clearFilters()">清除筛选</mdui-button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 管理功能区域 -->
+        <section style="padding: 20px;">
+            <mdui-typography variant="headline-small" style="margin-bottom: 20px;">管理功能</mdui-typography>
+            
+            <div class="filter-section">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                    <mdui-card onclick="exportData()" style="cursor: pointer;">
+                        <div style="padding: 20px; text-align: center;">
+                            <mdui-icon style="font-size: 48px; margin-bottom: 12px;">download</mdui-icon>
+                            <mdui-typography variant="title-medium">导出数据</mdui-typography>
+                            <mdui-typography variant="body-small" color="secondary">备份所有模组数据</mdui-typography>
+                        </div>
+                    </mdui-card>
+                    
+                    <mdui-card onclick="showImportDialog()" style="cursor: pointer;">
+                        <div style="padding: 20px; text-align: center;">
+                            <mdui-icon style="font-size: 48px; margin-bottom: 12px;">upload</mdui-icon>
+                            <mdui-typography variant="title-medium">导入数据</mdui-typography>
+                            <mdui-typography variant="body-small" color="secondary">从文件恢复数据</mdui-typography>
+                        </div>
+                    </mdui-card>
+                    
+                    <mdui-card onclick="clearCache()" style="cursor: pointer;">
+                        <div style="padding: 20px; text-align: center;">
+                            <mdui-icon style="font-size: 48px; margin-bottom: 12px;">cleaning_services</mdui-icon>
+                            <mdui-typography variant="title-medium">清理缓存</mdui-typography>
+                            <mdui-typography variant="body-small" color="secondary">清理临时文件</mdui-typography>
+                        </div>
+                    </mdui-card>
+                    
+                    <mdui-card onclick="showStats()" style="cursor: pointer;">
+                        <div style="padding: 20px; text-align: center;">
+                            <mdui-icon style="font-size: 48px; margin-bottom: 12px;">analytics</mdui-icon>
+                            <mdui-typography variant="title-medium">统计信息</mdui-typography>
+                            <mdui-typography variant="body-small" color="secondary">查看详细统计</mdui-typography>
+                        </div>
+                    </mdui-card>
+                </div>
+            </div>
+        </section>
+
+        <!-- 游戏分区 -->
+        <section style="padding: 20px;">
+            <mdui-typography variant="headline-large" style="margin-bottom: 32px; text-align: center;">
+                热门游戏分区
+            </mdui-typography>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px;">
+                <div onclick="filterByGame('Minecraft')" style="cursor: pointer; text-align: center; padding: 20px; background: linear-gradient(135deg, #4CAF50, #45a049); color: white; border-radius: 12px; transition: transform 0.2s;">
+                    <mdui-icon style="font-size: 48px; margin-bottom: 12px;">games</mdui-icon>
+                    <mdui-typography variant="title-medium">Minecraft</mdui-typography>
+                </div>
+                <div onclick="filterByGame('Cyberpunk 2077')" style="cursor: pointer; text-align: center; padding: 20px; background: linear-gradient(135deg, #FF9800, #F57C00); color: white; border-radius: 12px; transition: transform 0.2s;">
+                    <mdui-icon style="font-size: 48px; margin-bottom: 12px;">sports_esports</mdui-icon>
+                    <mdui-typography variant="title-medium">Cyberpunk 2077</mdui-typography>
+                </div>
+                <div onclick="filterByGame('Stardew Valley')" style="cursor: pointer; text-align: center; padding: 20px; background: linear-gradient(135deg, #E91E63, #C2185B); color: white; border-radius: 12px; transition: transform 0.2s;">
+                    <mdui-icon style="font-size: 48px; margin-bottom: 12px;">grass</mdui-icon>
+                    <mdui-typography variant="title-medium">Stardew Valley</mdui-typography>
+                </div>
+                <div onclick="filterByGame('Terraria')" style="cursor: pointer; text-align: center; padding: 20px; background: linear-gradient(135deg, #9C27B0, #7B1FA2); color: white; border-radius: 12px; transition: transform 0.2s;">
+                    <mdui-icon style="font-size: 48px; margin-bottom: 12px;">landscape</mdui-icon>
+                    <mdui-typography variant="title-medium">Terraria</mdui-typography>
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin: 32px 0;">
+                <mdui-typography variant="headline-medium">更多游戏，敬请期待</mdui-typography>
+            </div>
+        </section>
+
+        <!-- FNF模组专区 -->
+        <section style="padding: 20px; background: linear-gradient(135deg, #673AB7, #512DA8); color: white; border-radius: 12px; margin-bottom: 40px;">
+            <div style="text-align: center; padding: 40px 20px;">
+                <mdui-typography variant="headline-large" style="margin-bottom: 16px;">
+                    Friday Night Funkin' 模组专区
+                </mdui-typography>
+                <mdui-typography variant="title-medium" style="margin-bottom: 32px; opacity: 0.9;">
+                    精选最热门的FNF模组，让你的节奏游戏更加精彩！
+                </mdui-typography>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+                    <mdui-card onclick="viewExternalMod('https://gamebanana.com/mods/160846')" style="cursor: pointer;">
+                        <div style="position: relative;">
+                            <img src="https://picsum.photos/seed/vsimpostor/400/300.jpg" alt="VS Impostor V4" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px;" onerror="this.src='https://picsum.photos/seed/vsimpostor2/400/300.jpg'">
+                            <div style="position: absolute; top: 8px; left: 8px; background: #FF5252; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">
+                                🔥 热门
+                            </div>
+                            <div style="position: absolute; top: 8px; right: 8px; background: #673AB7; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">
+                                GameBanana
+                            </div>
+                        </div>
+                        <div style="padding: 16px;">
+                            <mdui-typography variant="title-medium">VS Impostor V4</mdui-typography>
+                            <mdui-typography variant="body-small" color="secondary">全新角色，全新体验</mdui-typography>
+                            <div style="margin-top: 12px;">
+                                <span style="color: #666; font-size: 14px;">📥 15.2万 • ❤️ 8.9千</span>
+                            </div>
+                        </div>
+                    </mdui-card>
+                    
+                    <mdui-card onclick="viewExternalMod('https://gamebanana.com/mods/199938')" style="cursor: pointer;">
+                        <div style="position: relative;">
+                            <img src="https://picsum.photos/seed/crazymod/400/300.jpg" alt="Crazy Mod" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px;" onerror="this.src='https://picsum.photos/seed/crazymod2/400/300.jpg'">
+                            <div style="position: absolute; top: 8px; left: 8px; background: #4CAF50; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">
+                                🎵 音乐
+                            </div>
+                            <div style="position: absolute; top: 8px; right: 8px; background: #673AB7; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">
+                                GameBanana
+                            </div>
+                        </div>
+                        <div style="padding: 16px;">
+                            <mdui-typography variant="title-medium">Crazy Mod</mdui-typography>
+                            <mdui-typography variant="body-small" color="secondary">音乐节奏模组</mdui-typography>
+                            <div style="margin-top: 12px;">
+                                <span style="color: #666; font-size: 14px;">📥 12.8万 • ❤️ 6.2千</span>
+                            </div>
+                        </div>
+                    </mdui-card>
+                    
+                    <mdui-card onclick="viewExternalMod('https://gamebanana.com/mods/199938')" style="cursor: pointer;">
+                        <div style="position: relative;">
+                            <img src="https://picsum.photos/seed/kadeengine/400/300.jpg" alt="Kade Engine" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px;" onerror="this.src='https://picsum.photos/seed/kadeengine2/400/300.jpg'">
+                            <div style="position: absolute; top: 8px; left: 8px; background: #2196F3; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">
+                                🎮 引擎
+                            </div>
+                            <div style="position: absolute; top: 8px; right: 8px; background: #673AB7; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">
+                                GameBanana
+                            </div>
+                        </div>
+                        <div style="padding: 16px;">
+                            <mdui-typography variant="title-medium">Kade Engine</mdui-typography>
+                            <mdui-typography variant="body-small" color="secondary">游戏引擎模组</mdui-typography>
+                            <div style="margin-top: 12px;">
+                                <span style="color: #666; font-size: 14px;">📥 9.6万 • ❤️ 4.8千</span>
+                            </div>
+                        </div>
+                    </mdui-card>
+                    
+                    <mdui-card onclick="openGameBananaImport(3827)" style="cursor: pointer;">
+                        <div style="position: relative;">
+                            <img src="https://picsum.photos/seed/catmod/400/300.jpg" alt="Cat Mod" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px;" onerror="this.src='https://picsum.photos/seed/catmod2/400/300.jpg'">
+                            <div style="position: absolute; top: 8px; left: 8px; background: #FF9800; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">
+                                🐱 猫咪
+                            </div>
+                            <div style="position: absolute; top: 8px; right: 8px; background: #9C27B0; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">
+                                GameBanana
+                            </div>
+                        </div>
+                        <div style="padding: 16px;">
+                            <mdui-typography variant="title-medium">Cat Mod</mdui-typography>
+                            <mdui-typography variant="body-small" color="secondary">可爱的猫咪主题模组</mdui-typography>
+                            <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <span style="color: #666; font-size: 14px;">📥 8.4万 • ❤️ 3.2千</span>
+                                <mdui-button variant="outlined" size="small" onclick="event.stopPropagation(); openGameBananaImport(3827)">导入</mdui-button>
+                            </div>
+                        </div>
+                    </mdui-card>
+                </div>
+            </div>
+        </section>
+
+        <!-- 模组列表 -->
+        <section style="padding: 20px;">
+            <mdui-typography variant="headline-small" style="margin-bottom: 20px;">热门模组</mdui-typography>
+            <div id="modsGrid" class="mod-grid">
+                <!-- 模组卡片将通过 JavaScript 动态生成 -->
+            </div>
+        </section>
+    </main>
+
+    <!-- 上传模组悬浮按钮 -->
+    <div class="fab-container">
+        <mdui-fab icon="add" extended onclick="openUploadDialog()">
+            上传模组
+        </mdui-fab>
+    </div>
+
+    <!-- 上传模组对话框 -->
+    <mdui-dialog id="uploadDialog" headline="上传新模组">
+        <div style="padding: 20px;">
+            <mdui-text-field id="modName" label="模组名称" required></mdui-text-field>
+            <mdui-text-field id="modGame" label="所属游戏" required></mdui-text-field>
+            <mdui-text-field id="modAuthor" label="作者" required></mdui-text-field>
+            <mdui-text-field id="modVersion" label="版本" value="1.0.0"></mdui-text-field>
+            <mdui-text-field id="modDescription" label="描述" rows="4" required></mdui-text-field>
+            <mdui-text-field id="modTags" label="标签 (用逗号分隔)"></mdui-text-field>
+            
+            <div style="margin: 16px 0;">
+                <mdui-typography>模组文件</mdui-typography>
+                <input type="file" id="modFile" accept=".zip,.rar,.7z" style="margin-top: 8px;">
+            </div>
+            
+            <div style="margin: 16px 0;">
+                <mdui-typography>预览图片</mdui-typography>
+                <input type="file" id="modImage" accept="image/*" style="margin-top: 8px;">
+            </div>
+        </div>
+        
+        <mdui-button slot="action" onclick="closeUploadDialog()">取消</mdui-button>
+        <mdui-button slot="action" onclick="uploadMod()" variant="filled">上传</mdui-button>
+    </mdui-dialog>
+
+    <script>
+        let allMods = [];
+        let allGames = [];
+        let allTags = [];
+
+        // 初始化页面
+        document.addEventListener('DOMContentLoaded', async function() {
+            await loadMods();
+            await loadFilters();
+            updateStats();
+            renderMods(allMods);
+            initMenuCategories(); // 初始化菜单分类
+        });
+
+        // 加载模组数据
+        async function loadMods() {
+            try {
+                const response = await fetch('/api/mods');
+                allMods = await response.json();
+            } catch (error) {
+                console.error('加载模组失败:', error);
+                showSnackbar('加载模组失败', 'error');
+            }
+        }
+
+        // 加载筛选器数据
+        async function loadFilters() {
+            try {
+                const [gamesResponse, tagsResponse] = await Promise.all([
+                    fetch('/api/games'),
+                    fetch('/api/tags')
+                ]);
+                
+                allGames = await gamesResponse.json();
+                allTags = await tagsResponse.json();
+
+                // 填充游戏筛选器
+                const gameFilter = document.getElementById('gameFilter');
+                allGames.forEach(game => {
+                    const item = document.createElement('mdui-menu-item');
+                    item.value = game;
+                    item.textContent = game;
+                    gameFilter.appendChild(item);
+                });
+
+                // 填充标签筛选器
+                const tagFilter = document.getElementById('tagFilter');
+                allTags.forEach(tag => {
+                    const item = document.createElement('mdui-menu-item');
+                    item.value = tag;
+                    item.textContent = tag;
+                    tagFilter.appendChild(item);
+                });
+            } catch (error) {
+                console.error('加载筛选器数据失败:', error);
+            }
+        }
+
+        // 更新统计数据
+        function updateStats() {
+            const totalMods = allMods.length;
+            const totalDownloads = allMods.reduce((sum, mod) => sum + mod.downloads, 0);
+            const totalGames = new Set(allMods.map(mod => mod.game)).size;
+
+            document.getElementById('totalMods').textContent = totalMods;
+            document.getElementById('totalDownloads').textContent = totalDownloads.toLocaleString();
+            document.getElementById('totalGames').textContent = totalGames;
+        }
+
+        // 渲染模组列表
+        function renderMods(mods) {
+            const grid = document.getElementById('modsGrid');
+            grid.innerHTML = '';
+
+            mods.forEach(mod => {
+                const card = document.createElement('mdui-card');
+                card.className = 'mod-card';
+                
+                card.innerHTML = `
+                    <div style="position: relative;">
+                        <img src="${mod.image}" alt="${mod.name}" style="width: 100%; height: 200px; object-fit: cover;">
+                            <div style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.7); color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">
+                                ${mod.game}
+                            </div>
+                        </div>
+                    <div style="padding: 16px;">
+                        <mdui-typography variant="headline-small" style="margin-bottom: 8px;">${mod.name}</mdui-typography>
+                        <mdui-typography variant="body-medium" style="color: #666; margin-bottom: 8px;">作者: ${mod.author}</mdui-typography>
+                        
+                        <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 12px;">
+                            ${mod.tags.map(tag => `<span class="tag-chip" style="background: #e3f2fd; color: #1976d2; padding: 2px 8px; border-radius: 12px; font-size: 12px;">${tag}</span>`).join('')}
+                        </div>
+                        
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; gap: 16px; color: #666; font-size: 14px;">
+                                <span>📥 ${mod.downloads.toLocaleString()}</span>
+                                <span>❤️ ${mod.likes}</span>
+                                <span>📅 ${mod.createdAt}</span>
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <mdui-button-icon icon="favorite" onclick="event.stopPropagation(); likeMod(${mod.id})" title="点赞"></mdui-button-icon>
+                                <mdui-button-icon icon="visibility" onclick="event.stopPropagation(); viewModDetails(${mod.id})" title="查看详情"></mdui-button-icon>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                grid.appendChild(card);
+            });
+        }
+
+        // 搜索功能
+        document.getElementById('searchInput').addEventListener('input', debounce(filterMods, 300));
+        document.getElementById('gameFilter').addEventListener('change', filterMods);
+        document.getElementById('tagFilter').addEventListener('change', filterMods);
+
+        function filterMods() {
+            const search = document.getElementById('searchInput').value;
+            const game = document.getElementById('gameFilter').value;
+            const tag = document.getElementById('tagFilter').value;
+
+            let filtered = allMods;
+
+            if (search) {
+                filtered = filtered.filter(mod => 
+                    mod.name.toLowerCase().includes(search.toLowerCase()) ||
+                    mod.description.toLowerCase().includes(search.toLowerCase())
+                );
+            }
+
+            if (game) {
+                filtered = filtered.filter(mod => mod.game === game);
+            }
+
+            if (tag) {
+                filtered = filtered.filter(mod => mod.tags.includes(tag));
+            }
+
+            renderMods(filtered);
+        }
+
+        function clearFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('gameFilter').value = '';
+            document.getElementById('tagFilter').value = '';
+            renderMods(allMods);
+        }
+
+        // 防抖函数
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // 点赞功能
+        async function likeMod(id) {
+            try {
+                const response = await fetch(`/api/mods/${id}/like`, { method: 'POST' });
+                const data = await response.json();
+                
+                // 更新本地数据
+                const mod = allMods.find(m => m.id === id);
+                if (mod) {
+                    mod.likes = data.likes;
+                    filterMods(); // 重新渲染当前视图
+                    showSnackbar('点赞成功！');
+                }
+            } catch (error) {
+                console.error('点赞失败:', error);
+                showSnackbar('点赞失败', 'error');
+            }
+        }
+
+        // 查看模组详情
+        function viewModDetails(id) {
+            window.location.href = `/mod.html?id=${id}`;
+        }
+
+        // 打开上传对话框
+        function openUploadDialog() {
+            document.getElementById('uploadDialog').open = true;
+        }
+
+        // 关闭上传对话框
+        function closeUploadDialog() {
+            document.getElementById('uploadDialog').open = false;
+            // 清空表单
+            document.getElementById('modName').value = '';
+            document.getElementById('modGame').value = '';
+            document.getElementById('modAuthor').value = '';
+            document.getElementById('modVersion').value = '1.0.0';
+            document.getElementById('modDescription').value = '';
+            document.getElementById('modTags').value = '';
+            document.getElementById('modFile').value = '';
+            document.getElementById('modImage').value = '';
+        }
+
+        // 上传模组
+        async function uploadMod() {
+            const formData = new FormData();
+            formData.append('name', document.getElementById('modName').value);
+            formData.append('game', document.getElementById('modGame').value);
+            formData.append('author', document.getElementById('modAuthor').value);
+            formData.append('version', document.getElementById('modVersion').value);
+            formData.append('description', document.getElementById('modDescription').value);
+            formData.append('tags', document.getElementById('modTags').value);
+            
+            const fileInput = document.getElementById('modFile');
+            const imageInput = document.getElementById('modImage');
+            
+            if (fileInput.files[0]) {
+                formData.append('file', fileInput.files[0]);
+            }
+            
+            if (imageInput.files[0]) {
+                formData.append('image', imageInput.files[0]);
+            }
+
+            try {
+                const response = await fetch('/api/mods', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    closeUploadDialog();
+                    showSnackbar('模组上传成功！');
+                    await loadMods();
+                    filterMods();
+                    updateStats();
+                } else {
+                    showSnackbar('上传失败，请检查必填字段', 'error');
+                }
+            } catch (error) {
+                console.error('上传失败:', error);
+                showSnackbar('上传失败', 'error');
+            }
+        }
+
+        // 显示提示消息
+        function showSnackbar(message, type = 'success') {
+            const snackbar = document.createElement('mdui-snackbar');
+            snackbar.position = 'top';
+            snackbar.message = message;
+            
+            if (type === 'error') {
+                snackbar.style.setProperty('--mdui-color-snackbar-container', '#f44336');
+            }
+            
+            document.body.appendChild(snackbar);
+            snackbar.open = true;
+            
+            setTimeout(() => {
+                document.body.removeChild(snackbar);
+            }, 3000);
+        }
+
+        // 管理功能
+        // 导出数据
+        async function exportData() {
+            try {
+                const response = await fetch('/api/export');
+                const data = await response.json();
+                
+                // 创建下载链接
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `mods_backup_${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                showSnackbar('数据导出成功！');
+            } catch (error) {
+                console.error('导出失败:', error);
+                showSnackbar('导出失败', 'error');
+            }
+        }
+
+        // 显示导入对话框
+        function showImportDialog() {
+            const dialog = document.createElement('mdui-dialog');
+            dialog.headline = '导入数据';
+            dialog.innerHTML = `
+                <div style="padding: 20px;">
+                    <mdui-typography variant="body-medium" style="margin-bottom: 16px;">
+                        选择要导入的数据文件（JSON格式）
+                    </mdui-typography>
+                    <input type="file" id="importFile" accept=".json" style="width: 100%;">
+                    <div style="margin-top: 12px; font-size: 12px; color: #666;">
+                        注意：导入数据将覆盖现有数据，请谨慎操作
+                    </div>
+                </div>
+                <mdui-button slot="action" onclick="this.parentElement.close()">取消</mdui-button>
+                <mdui-button slot="action" onclick="importData()" variant="filled">导入</mdui-button>
+            `;
+            
+            document.body.appendChild(dialog);
+            dialog.open = true;
+        }
+
+        // 导入数据
+        async function importData() {
+            const fileInput = document.getElementById('importFile');
+            if (!fileInput.files[0]) {
+                showSnackbar('请选择文件', 'error');
+                return;
+            }
+
+            try {
+                const file = fileInput.files[0];
+                const text = await file.text();
+                const data = JSON.parse(text);
+
+                const response = await fetch('/api/import', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    showSnackbar('数据导入成功！');
+                    await loadMods();
+                    await loadFilters();
+                    updateStats();
+                    renderMods(allMods);
+                } else {
+                    showSnackbar('导入失败', 'error');
+                }
+            } catch (error) {
+                console.error('导入失败:', error);
+                showSnackbar('导入失败', 'error');
+            }
+        }
+
+        // 清理缓存
+        async function clearCache() {
+            try {
+                const response = await fetch('/api/clear-cache', { method: 'POST' });
+                const result = await response.json();
+                
+                showSnackbar(`缓存清理完成！清理了 ${result.clearedItems} 项`);
+            } catch (error) {
+                console.error('清理失败:', error);
+                showSnackbar('清理失败', 'error');
+            }
+        }
+
+        // 显示统计信息
+        async function showStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const stats = await response.json();
+                
+                const dialog = document.createElement('mdui-dialog');
+                dialog.headline = '详细统计信息';
+                dialog.style.width = '600px';
+                
+                dialog.innerHTML = `
+                    <div style="padding: 20px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                            <div>
+                                <mdui-typography variant="title-medium">模组统计</mdui-typography>
+                                <div style="margin-top: 12px;">
+                                    <div>总模组数: ${stats.totalMods}</div>
+                                    <div>总下载量: ${stats.totalDownloads.toLocaleString()}</div>
+                                    <div>总点赞数: ${stats.totalLikes}</div>
+                                    <div>支持游戏: ${stats.totalGames} 款</div>
+                                </div>
+                            </div>
+                            <div>
+                                <mdui-typography variant="title-medium">标签统计</mdui-typography>
+                                <div style="margin-top: 12px;">
+                                    ${stats.topTags.map(tag => `
+                                        <div>${tag.name}: ${tag.count} 个模组</div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 20px;">
+                            <mdui-typography variant="title-medium">热门游戏</mdui-typography>
+                            <div style="margin-top: 12px;">
+                                ${stats.topGames.map(game => `
+                                    <div>${game.name}: ${game.mods} 个模组</div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                    <mdui-button slot="action" onclick="this.parentElement.close()">关闭</mdui-button>
+                `;
+                
+                document.body.appendChild(dialog);
+                dialog.open = true;
+            } catch (error) {
+                console.error('获取统计失败:', error);
+                showSnackbar('获取统计失败', 'error');
+            }
+        }
+
+        // 导航功能
+        function toggleMenu() {
+            const drawer = document.getElementById('sideMenu');
+            drawer.open = !drawer.open;
+        }
+
+        function focusSearch() {
+            document.getElementById('searchInput').focus();
+        }
+
+        function showNotifications() {
+            document.getElementById('notificationDialog').open = true;
+        }
+
+        function closeNotifications() {
+            document.getElementById('notificationDialog').open = false;
+        }
+
+        function showUserMenu() {
+            document.getElementById('userMenuDialog').open = true;
+        }
+
+        function closeUserMenu() {
+            document.getElementById('userMenuDialog').open = false;
+        }
+
+        function navigateToHome() {
+            window.location.href = '/';
+        }
+
+        function navigateToAdmin() {
+            window.location.href = '/admin.html';
+        }
+
+        function goToAdmin() {
+            window.location.href = '/admin.html';
+        }
+
+        function goToFavorites() {
+            showSnackbar('收藏功能开发中...');
+            closeUserMenu();
+        }
+
+        function goToUploads() {
+            showSnackbar('我的上传功能开发中...');
+            closeUserMenu();
+        }
+
+        function showSettings() {
+            showSnackbar('设置功能开发中...');
+            closeUserMenu();
+        }
+
+        function showAbout() {
+            const dialog = document.createElement('mdui-dialog');
+            dialog.headline = '关于游戏模组收录站';
+            dialog.innerHTML = `
+                <div style="padding: 20px;">
+                    <mdui-typography variant="body-medium" style="margin-bottom: 16px;">
+                        游戏模组收录站 v1.0.0
+                    </mdui-typography>
+                    <mdui-typography variant="body-small" color="secondary" style="margin-bottom: 16px;">
+                        一个专注于游戏模组分享和管理的平台，为玩家和模组作者提供便捷的服务。
+                    </mdui-typography>
+                    
+                    <div style="margin-top: 24px;">
+                        <mdui-typography variant="title-medium">主要功能</mdui-typography>
+                        <ul style="margin-top: 12px; padding-left: 20px;">
+                            <li>模组上传和分享</li>
+                            <li>模组搜索和筛选</li>
+                            <li>点赞和评论系统</li>
+                            <li>数据导出和导入</li>
+                            <li>管理后台系统</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="margin-top: 24px; text-align: center;">
+                        <mdui-typography variant="body-small" color="secondary">
+                            © 2024 游戏模组收录站. All rights reserved.
+                        </mdui-typography>
+                    </div>
+                </div>
+                <mdui-button slot="action" onclick="this.parentElement.close()">关闭</mdui-button>
+            `;
+            
+            document.body.appendChild(dialog);
+            dialog.open = true;
+        }
+
+        // 初始化菜单分类
+        function initMenuCategories() {
+            const categoriesContainer = document.getElementById('menuCategories');
+            allGames.forEach(game => {
+                const categoryItem = document.createElement('div');
+                categoryItem.style.cssText = 'padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: background-color 0.2s;';
+                categoryItem.innerHTML = `
+                    <mdui-typography variant="body-medium">${game}</mdui-typography>
+                `;
+                categoryItem.onclick = () => filterByGame(game);
+                categoryItem.onmouseover = () => categoryItem.style.backgroundColor = '#f5f5f5';
+                categoryItem.onmouseout = () => categoryItem.style.backgroundColor = 'transparent';
+                categoriesContainer.appendChild(categoryItem);
+            });
+        }
+
+        function filterByGame(game) {
+            document.getElementById('gameFilter').value = game;
+            filterMods();
+            toggleMenu(); // 关闭菜单
+        }
+
+        // GameBanana 相关功能
+        async function openGameBananaImport(categoryId) {
+            try {
+                const response = await fetch(`/api/gamebanana/import`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+                    },
+                    body: JSON.stringify({ modId: categoryId })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showSnackbar('成功从 GameBanana 导入模组！');
+                    // 刷新模组列表
+                    await loadMods();
+                    filterMods();
+                    updateStats();
+                } else {
+                    showSnackbar('导入失败', 'error');
+                }
+            } catch (error) {
+                console.error('导入失败:', error);
+                showSnackbar('导入失败', 'error');
+            }
+        }
+
+        // 修复对话框关闭功能
+        function closeDialog(dialogId) {
+            const dialog = document.getElementById(dialogId);
+            if (dialog) {
+                dialog.open = false;
+            }
+        }
+
+        function closeUploadDialog() {
+            closeDialog('uploadDialog');
+            // 清空表单
+            document.getElementById('modName').value = '';
+            document.getElementById('modGame').value = '';
+            document.getElementById('modAuthor').value = '';
+            document.getElementById('modVersion').value = '1.0.0';
+            document.getElementById('modDescription').value = '';
+            document.getElementById('modTags').value = '';
+            document.getElementById('modFile').value = '';
+            document.getElementById('modImage').value = '';
+        }
+
+        function closeNotifications() {
+            closeDialog('notificationDialog');
+        }
+
+        function closeUserMenu() {
+            closeDialog('userMenuDialog');
+        }
+
+        // 查看外部模组
+        function viewExternalMod(url) {
+            // 显示确认对话框
+            const dialog = document.createElement('mdui-dialog');
+            dialog.headline = '外部模组';
+            dialog.innerHTML = `
+                <div style="padding: 20px;">
+                    <mdui-typography variant="body-medium" style="margin-bottom: 16px;">
+                        您即将访问 GameBanana 上的模组
+                    </mdui-typography>
+                    <mdui-typography variant="body-small" color="secondary" style="margin-bottom: 20px;">
+                        这个模组托管在 GameBanana 平台上，点击"确定"将在新标签页中打开它。
+                    </mdui-typography>
+                    
+                    <div style="margin: 20px 0;">
+                        <mdui-checkbox id="dontShowAgain">
+                            不再显示此提示
+                        </mdui-checkbox>
+                    </div>
+                </div>
+                <mdui-button slot="action" onclick="this.parentElement.close()">取消</mdui-button>
+                <mdui-button slot="action" onclick="confirmExternalMod('${url}')" variant="filled">确定</mdui-button>
+            `;
+            
+            document.body.appendChild(dialog);
+            dialog.open = true;
+            
+            // 添加确认功能到全局作用域
+            window.confirmExternalMod = function(modUrl) {
+                const dontShowAgain = document.getElementById('dontShowAgain').checked;
+                if (dontShowAgain) {
+                    localStorage.setItem('dontShowExternalModWarning', 'true');
+                }
+                
+                dialog.close();
+                window.open(modUrl, '_blank');
+                
+                // 清理全局函数
+                delete window.confirmExternalMod;
+            };
+        }
+    </script>
+</body>
+</html>

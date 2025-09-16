@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理后台 - 游戏模组收录站</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://unpkg.com/mdui@2.0.3/mdui.css" rel="stylesheet">
+    <script src="https://unpkg.com/mdui@2.0.3/mdui.global.js"></script>
+    <style>
+        .admin-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .action-card {
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .action-card:hover {
+            transform: translateY(-4px);
+        }
+        .mod-list {
+            margin-top: 20px;
+        }
+        .mod-item {
+            display: flex;
+            align-items: center;
+            padding: 16px;
+            border-bottom: 1px solid #eee;
+        }
+        .mod-item:last-child {
+            border-bottom: none;
+        }
+        .mod-info {
+            flex: 1;
+        }
+        .mod-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .login-form {
+            max-width: 400px;
+            margin: 100px auto;
+            padding: 40px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- 登录界面 -->
+    <div id="loginScreen">
+        <div class="login-form">
+            <mdui-typography variant="headline-large" style="text-align: center; margin-bottom: 32px;">
+                管理员登录
+            </mdui-typography>
+            <mdui-text-field id="adminUsername" label="用户名" style="width: 100%; margin-bottom: 16px;"></mdui-text-field>
+            <mdui-text-field id="adminPassword" label="密码" type="password" style="width: 100%; margin-bottom: 24px;"></mdui-text-field>
+            <mdui-button onclick="adminLogin()" variant="filled" style="width: 100%;">登录</mdui-button>
+        </div>
+    </div>
+
+    <!-- 管理界面 -->
+    <div id="adminScreen" class="hidden">
+        <mdui-top-app-bar>
+            <mdui-button-icon icon="menu"></mdui-button-icon>
+            <div style="flex: 1;">管理后台</div>
+            <mdui-button-icon icon="logout" onclick="adminLogout()" title="退出登录"></mdui-button-icon>
+        </mdui-top-app-bar>
+
+        <div class="admin-container" style="margin-top: 64px;">
+            <!-- 统计数据 -->
+            <mdui-typography variant="headline-large" style="margin-bottom: 20px;">数据概览</mdui-typography>
+            <div class="stats-grid" id="adminStats">
+                <!-- 统计数据将动态加载 -->
+            </div>
+
+            <!-- 快速操作 -->
+            <mdui-typography variant="headline-large" style="margin: 40px 0 20px;">快速操作</mdui-typography>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                <mdui-card class="action-card" onclick="showAddModDialog()">
+                    <div style="padding: 20px; text-align: center;">
+                        <mdui-icon style="font-size: 48px; margin-bottom: 12px; color: #4CAF50;">add_circle</mdui-icon>
+                        <mdui-typography variant="title-medium">添加模组</mdui-typography>
+                    </div>
+                </mdui-card>
+                
+                <mdui-card class="action-card" onclick="exportAllData()">
+                    <div style="padding: 20px; text-align: center;">
+                        <mdui-icon style="font-size: 48px; margin-bottom: 12px; color: #2196F3;">download</mdui-icon>
+                        <mdui-typography variant="title-medium">导出数据</mdui-typography>
+                    </div>
+                </mdui-card>
+                
+                <mdui-card class="action-card" onclick="showImportDialog()">
+                    <div style="padding: 20px; text-align: center;">
+                        <mdui-icon style="font-size: 48px; margin-bottom: 12px; color: #FF9800;">upload</mdui-icon>
+                        <mdui-typography variant="title-medium">导入数据</mdui-typography>
+                    </div>
+                </mdui-card>
+                
+                <mdui-card class="action-card" onclick="clearAllCache()">
+                    <div style="padding: 20px; text-align: center;">
+                        <mdui-icon style="font-size: 48px; margin-bottom: 12px; color: #F44336;">cleaning_services</mdui-icon>
+                        <mdui-typography variant="title-medium">清理缓存</mdui-typography>
+                    </div>
+                </mdui-card>
+            </div>
+
+            <!-- 模组管理 -->
+            <mdui-typography variant="headline-large" style="margin: 40px 0 20px;">模组管理</mdui-typography>
+            <div style="margin-bottom: 16px;">
+                <mdui-text-field id="searchMod" placeholder="搜索模组..." icon="search" style="width: 300px;"></mdui-text-field>
+                <mdui-button onclick="loadMods()" style="margin-left: 16px;">刷新</mdui-button>
+            </div>
+            
+            <div class="mod-list" id="modList">
+                <!-- 模组列表将动态加载 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加模组对话框 -->
+    <mdui-dialog id="addModDialog" headline="添加新模组">
+        <div style="padding: 20px;">
+            <mdui-text-field id="newModName" label="模组名称" required></mdui-text-field>
+            <mdui-text-field id="newModGame" label="所属游戏" required></mdui-text-field>
+            <mdui-text-field id="newModAuthor" label="作者" required></mdui-text-field>
+            <mdui-text-field id="newModVersion" label="版本" value="1.0.0"></mdui-text-field>
+            <mdui-text-field id="newModDescription" label="描述" rows="4" required></mdui-text-field>
+            <mdui-text-field id="newModTags" label="标签 (用逗号分隔)"></mdui-text-field>
+            <mdui-text-field id="newModDownloads" label="下载量" type="number" value="0"></mdui-text-field>
+            <mdui-text-field id="newModLikes" label="点赞数" type="number" value="0"></mdui-text-field>
+            <mdui-text-field id="newModImage" label="图片URL"></mdui-text-field>
+            <mdui-text-field id="newModFile" label="文件URL"></mdui-text-field>
+        </div>
+        <mdui-button slot="action" onclick="closeAddModDialog()">取消</mdui-button>
+        <mdui-button slot="action" onclick="addNewMod()" variant="filled">添加</mdui-button>
+    </mdui-dialog>
+
+    <!-- 编辑模组对话框 -->
+    <mdui-dialog id="editModDialog" headline="编辑模组">
+        <div style="padding: 20px;">
+            <input type="hidden" id="editModId">
+            <mdui-text-field id="editModName" label="模组名称" required></mdui-text-field>
+            <mdui-text-field id="editModGame" label="所属游戏" required></mdui-text-field>
+            <mdui-text-field id="editModAuthor" label="作者" required></mdui-text-field>
+            <mdui-text-field id="editModVersion" label="版本"></mdui-text-field>
+            <mdui-text-field id="editModDescription" label="描述" rows="4" required></mdui-text-field>
+            <mdui-text-field id="editModTags" label="标签 (用逗号分隔)"></mdui-text-field>
+            <mdui-text-field id="editModDownloads" label="下载量" type="number"></mdui-text-field>
+            <mdui-text-field id="editModLikes" label="点赞数" type="number"></mdui-text-field>
+            <mdui-text-field id="editModImage" label="图片URL"></mdui-text-field>
+            <mdui-text-field id="editModFile" label="文件URL"></mdui-text-field>
+        </div>
+        <mdui-button slot="action" onclick="closeEditModDialog()">取消</mdui-button>
+        <mdui-button slot="action" onclick="updateMod()" variant="filled">保存</mdui-button>
+    </mdui-dialog>
+
+    <script>
+        let currentMods = [];
+        let editingModId = null;
+
+        // 检查登录状态
+        function checkAuth() {
+            const token = localStorage.getItem('adminToken');
+            if (token) {
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('adminScreen').classList.remove('hidden');
+                loadAdminStats();
+                loadMods();
+            }
+        }
+
+        // 管理员登录
+        async function adminLogin() {
+            const username = document.getElementById('adminUsername').value;
+            const password = document.getElementById('adminPassword').value;
+            
+            if (!username || !password) {
+                showSnackbar('请输入用户名和密码', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    localStorage.setItem('adminToken', data.token);
+                    document.getElementById('loginScreen').classList.add('hidden');
+                    document.getElementById('adminScreen').classList.remove('hidden');
+                    loadAdminStats();
+                    loadMods();
+                    showSnackbar('登录成功！');
+                } else {
+                    showSnackbar('用户名或密码错误', 'error');
+                }
+            } catch (error) {
+                console.error('登录失败:', error);
+                showSnackbar('登录失败', 'error');
+            }
+        }
+
+        // 管理员退出
+        function adminLogout() {
+            localStorage.removeItem('adminToken');
+            document.getElementById('loginScreen').classList.remove('hidden');
+            document.getElementById('adminScreen').classList.add('hidden');
+            showSnackbar('已退出登录');
+        }
+
+        // 加载管理员统计
+        async function loadAdminStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const stats = await response.json();
+                
+                document.getElementById('adminStats').innerHTML = `
+                    <mdui-card>
+                        <div style="padding: 20px; text-align: center;">
+                            <mdui-typography variant="display-small">${stats.totalMods}</mdui-typography>
+                            <mdui-typography variant="body-large">模组总数</mdui-typography>
+                        </div>
+                    </mdui-card>
+                    <mdui-card>
+                        <div style="padding: 20px; text-align: center;">
+                            <mdui-typography variant="display-small">${stats.totalDownloads.toLocaleString()}</mdui-typography>
+                            <mdui-typography variant="body-large">总下载量</mdui-typography>
+                        </div>
+                    </mdui-card>
+                    <mdui-card>
+                        <div style="padding: 20px; text-align: center;">
+                            <mdui-typography variant="display-small">${stats.totalLikes}</mdui-typography>
+                            <mdui-typography variant="body-large">总点赞数</mdui-typography>
+                        </div>
+                    </mdui-card>
+                    <mdui-card>
+                        <div style="padding: 20px; text-align: center;">
+                            <mdui-typography variant="display-small">${stats.totalGames}</mdui-typography>
+                            <mdui-typography variant="body-large">支持游戏</mdui-typography>
+                        </div>
+                    </mdui-card>
+                `;
+            } catch (error) {
+                console.error('加载统计失败:', error);
+            }
+        }
+
+        // 加载模组列表
+        async function loadMods() {
+            try {
+                const response = await fetch('/api/mods');
+                currentMods = await response.json();
+                renderModList();
+            } catch (error) {
+                console.error('加载模组失败:', error);
+                showSnackbar('加载模组失败', 'error');
+            }
+        }
+
+        // 渲染模组列表
+        function renderModList() {
+            const searchTerm = document.getElementById('searchMod').value.toLowerCase();
+            const filteredMods = currentMods.filter(mod => 
+                mod.name.toLowerCase().includes(searchTerm) ||
+                mod.game.toLowerCase().includes(searchTerm)
+            );
+
+            const modList = document.getElementById('modList');
+            modList.innerHTML = '';
+
+            if (filteredMods.length === 0) {
+                modList.innerHTML = '<div style="text-align: center; padding: 40px; color: #666;">没有找到模组</div>';
+                return;
+            }
+
+            filteredMods.forEach(mod => {
+                const modItem = document.createElement('div');
+                modItem.className = 'mod-item';
+                modItem.innerHTML = `
+                    <div class="mod-info">
+                        <mdui-typography variant="title-medium">${mod.name}</mdui-typography>
+                        <mdui-typography variant="body-small" color="secondary">${mod.game} • ${mod.author} • v${mod.version}</mdui-typography>
+                        <div style="margin-top: 8px;">
+                            <span style="color: #666; font-size: 14px;">📥 ${mod.downloads} • ❤️ ${mod.likes}</span>
+                        </div>
+                    </div>
+                    <div class="mod-actions">
+                        <mdui-button-icon icon="edit" onclick="showEditModDialog(${mod.id})" title="编辑"></mdui-button-icon>
+                        <mdui-button-icon icon="delete" onclick="deleteMod(${mod.id})" title="删除" style="color: #f44336;"></mdui-button-icon>
+                    </div>
+                `;
+                modList.appendChild(modItem);
+            });
+        }
+
+        // 显示添加模组对话框
+        function showAddModDialog() {
+            document.getElementById('addModDialog').open = true;
+        }
+
+        // 关闭添加模组对话框
+        function closeAddModDialog() {
+            document.getElementById('addModDialog').open = false;
+            clearAddModForm();
+        }
+
+        // 清空添加模组表单
+        function clearAddModForm() {
+            document.getElementById('newModName').value = '';
+            document.getElementById('newModGame').value = '';
+            document.getElementById('newModAuthor').value = '';
+            document.getElementById('newModVersion').value = '1.0.0';
+            document.getElementById('newModDescription').value = '';
+            document.getElementById('newModTags').value = '';
+            document.getElementById('newModDownloads').value = '0';
+            document.getElementById('newModLikes').value = '0';
+            document.getElementById('newModImage').value = '';
+            document.getElementById('newModFile').value = '';
+        }
+
+        // 添加新模组
+        async function addNewMod() {
+            const modData = {
+                name: document.getElementById('newModName').value,
+                game: document.getElementById('newModGame').value,
+                author: document.getElementById('newModAuthor').value,
+                version: document.getElementById('newModVersion').value,
+                description: document.getElementById('newModDescription').value,
+                tags: document.getElementById('newModTags').value,
+                downloads: parseInt(document.getElementById('newModDownloads').value) || 0,
+                likes: parseInt(document.getElementById('newModLikes').value) || 0,
+                image: document.getElementById('newModImage').value || `https://picsum.photos/seed/mod${Date.now()}/400/300.jpg`,
+                fileUrl: document.getElementById('newModFile').value || '',
+                createdAt: new Date().toISOString().split('T')[0]
+            };
+
+            try {
+                const response = await fetch('/api/admin/mods', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+                    },
+                    body: JSON.stringify(modData)
+                });
+
+                if (response.ok) {
+                    closeAddModDialog();
+                    loadMods();
+                    loadAdminStats();
+                    showSnackbar('模组添加成功！');
+                } else {
+                    showSnackbar('添加失败', 'error');
+                }
+            } catch (error) {
+                console.error('添加失败:', error);
+                showSnackbar('添加失败', 'error');
+            }
+        }
+
+        // 显示编辑模组对话框
+        function showEditModDialog(modId) {
+            const mod = currentMods.find(m => m.id === modId);
+            if (!mod) return;
+
+            document.getElementById('editModId').value = mod.id;
+            document.getElementById('editModName').value = mod.name;
+            document.getElementById('editModGame').value = mod.game;
+            document.getElementById('editModAuthor').value = mod.author;
+            document.getElementById('editModVersion').value = mod.version;
+            document.getElementById('editModDescription').value = mod.description;
+            document.getElementById('editModTags').value = mod.tags.join(', ');
+            document.getElementById('editModDownloads').value = mod.downloads;
+            document.getElementById('editModLikes').value = mod.likes;
+            document.getElementById('editModImage').value = mod.image;
+            document.getElementById('editModFile').value = mod.fileUrl;
+
+            document.getElementById('editModDialog').open = true;
+        }
+
+        // 关闭编辑模组对话框
+        function closeEditModDialog() {
+            document.getElementById('editModDialog').open = false;
+        }
+
+        // 更新模组
+        async function updateMod() {
+            const modId = parseInt(document.getElementById('editModId').value);
+            const modData = {
+                name: document.getElementById('editModName').value,
+                game: document.getElementById('editModGame').value,
+                author: document.getElementById('editModAuthor').value,
+                version: document.getElementById('editModVersion').value,
+                description: document.getElementById('editModDescription').value,
+                tags: document.getElementById('editModTags').value.split(',').map(tag => tag.trim()),
+                downloads: parseInt(document.getElementById('editModDownloads').value) || 0,
+                likes: parseInt(document.getElementById('editModLikes').value) || 0,
+                image: document.getElementById('editModImage').value,
+                fileUrl: document.getElementById('editModFile').value
+            };
+
+            try {
+                const response = await fetch(`/api/admin/mods/${modId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+                    },
+                    body: JSON.stringify(modData)
+                });
+
+                if (response.ok) {
+                    closeEditModDialog();
+                    loadMods();
+                    loadAdminStats();
+                    showSnackbar('模组更新成功！');
+                } else {
+                    showSnackbar('更新失败', 'error');
+                }
+            } catch (error) {
+                console.error('更新失败:', error);
+                showSnackbar('更新失败', 'error');
+            }
+        }
+
+        // 删除模组
+        async function deleteMod(modId) {
+            if (!confirm('确定要删除这个模组吗？此操作不可恢复。')) return;
+
+            try {
+                const response = await fetch(`/api/admin/mods/${modId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+                    }
+                });
+
+                if (response.ok) {
+                    loadMods();
+                    loadAdminStats();
+                    showSnackbar('模组删除成功！');
+                } else {
+                    showSnackbar('删除失败', 'error');
+                }
+            } catch (error) {
+                console.error('删除失败:', error);
+                showSnackbar('删除失败', 'error');
+            }
+        }
+
+        // 导出所有数据
+        function exportAllData() {
+            window.location.href = '/api/export?token=' + localStorage.getItem('adminToken');
+        }
+
+        // 显示导入对话框
+        function showImportDialog() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                try {
+                    const text = await file.text();
+                    const data = JSON.parse(text);
+
+                    const response = await fetch('/api/import', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+                        },
+                        body: JSON.stringify(data)
+                    });
+
+                    if (response.ok) {
+                        loadMods();
+                        loadAdminStats();
+                        showSnackbar('数据导入成功！');
+                    } else {
+                        showSnackbar('导入失败', 'error');
+                    }
+                } catch (error) {
+                    console.error('导入失败:', error);
+                    showSnackbar('导入失败', 'error');
+                }
+            };
+            input.click();
+        }
+
+        // 清理所有缓存
+        async function clearAllCache() {
+            if (!confirm('确定要清理所有缓存吗？此操作不可恢复。')) return;
+
+            try {
+                const response = await fetch('/api/clear-cache', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+                    }
+                });
+
+                const result = await response.json();
+                showSnackbar(`缓存清理完成！清理了 ${result.clearedItems} 项`);
+            } catch (error) {
+                console.error('清理失败:', error);
+                showSnackbar('清理失败', 'error');
+            }
+        }
+
+        // 显示提示消息
+        function showSnackbar(message, type = 'success') {
+            const snackbar = document.createElement('mdui-snackbar');
+            snackbar.position = 'top';
+            snackbar.message = message;
+            
+            if (type === 'error') {
+                snackbar.style.setProperty('--mdui-color-snackbar-container', '#f44336');
+            }
+            
+            document.body.appendChild(snackbar);
+            snackbar.open = true;
+            
+            setTimeout(() => {
+                document.body.removeChild(snackbar);
+            }, 3000);
+        }
+
+        // 搜索功能
+        document.getElementById('searchMod')?.addEventListener('input', renderModList);
+
+        // 页面加载时检查登录状态
+        document.addEventListener('DOMContentLoaded', checkAuth);
+    </script>
+</body>
+</html>

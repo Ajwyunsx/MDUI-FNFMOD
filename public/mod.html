@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>模组详情 - 游戏模组收录站</title>
+    <!-- Material Icons 字体 -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://unpkg.com/mdui@2.0.3/mdui.css" rel="stylesheet">
+    <script src="https://unpkg.com/mdui@2.0.3/mdui.global.js"></script>
+    <style>
+        .hero-image {
+            width: 100%;
+            height: 400px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+        .info-section {
+            background: #f8f9fa;
+            padding: 24px;
+            border-radius: 8px;
+            margin: 24px 0;
+        }
+        .stats-row {
+            display: flex;
+            gap: 32px;
+            flex-wrap: wrap;
+            margin: 16px 0;
+        }
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #666;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 16px;
+            margin: 24px 0;
+            flex-wrap: wrap;
+        }
+        .tag-list {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin: 16px 0;
+        }
+        .description-content {
+            line-height: 1.6;
+            margin: 24px 0;
+        }
+        .screenshot-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
+            margin: 24px 0;
+        }
+        .screenshot-item {
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .screenshot-item:hover {
+            transform: scale(1.05);
+        }
+        .screenshot-item img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+        }
+        .comments-section {
+            margin: 48px 0;
+            padding: 24px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .comment-item {
+            padding: 16px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .comment-item:last-child {
+            border-bottom: none;
+        }
+        .comment-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        .loading-spinner {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+        }
+        @media (max-width: 768px) {
+            .hero-image {
+                height: 250px;
+            }
+            .action-buttons {
+                flex-direction: column;
+            }
+            .stats-row {
+                flex-direction: column;
+                gap: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <mdui-top-app-bar>
+        <mdui-button-icon icon="arrow_back" onclick="goBack()" title="返回"></mdui-button-icon>
+        <div style="flex: 1;">模组详情</div>
+        <mdui-button-icon icon="share" title="分享"></mdui-button-icon>
+        <mdui-button-icon icon="favorite" title="收藏"></mdui-button-icon>
+    </mdui-top-app-bar>
+
+    <!-- 主要内容区域 -->
+    <main style="margin-top: 64px; padding: 20px;">
+        <!-- 加载状态 -->
+        <div id="loadingState" class="loading-spinner">
+            <mdui-circular-progress></mdui-circular-progress>
+        </div>
+
+        <!-- 模组详情内容 -->
+        <div id="modContent" style="display: none;">
+            <!-- 主图片 -->
+            <div style="margin-bottom: 24px;">
+                <img id="modImage" src="" alt="" class="hero-image">
+            </div>
+
+            <!-- 基本信息 -->
+            <mdui-typography id="modTitle" variant="headline-large" style="margin-bottom: 8px;"></mdui-typography>
+            <mdui-typography id="modSubtitle" variant="title-medium" style="color: #666; margin-bottom: 24px;"></mdui-typography>
+
+            <!-- 操作按钮 -->
+            <div class="action-buttons">
+                <mdui-button id="downloadBtn" variant="filled" icon="download" onclick="downloadMod()">
+                    下载模组
+                </mdui-button>
+                <mdui-button id="likeBtn" icon="favorite" onclick="likeMod()">
+                    <span id="likeText">点赞</span>
+                </mdui-button>
+                <mdui-button icon="report_problem" onclick="reportMod()">举报</mdui-button>
+            </div>
+
+            <!-- 统计信息 -->
+            <div class="info-section">
+                <mdui-typography variant="headline-small" style="margin-bottom: 16px;">模组信息</mdui-typography>
+                
+                <div class="stats-row">
+                    <div class="stat-item">
+                        <mdui-icon>gamepad</mdui-icon>
+                        <span>游戏: <strong id="modGame"></strong></span>
+                    </div>
+                    <div class="stat-item">
+                        <mdui-icon>person</mdui-icon>
+                        <span>作者: <strong id="modAuthor"></strong></span>
+                    </div>
+                    <div class="stat-item">
+                        <mdui-icon>new_releases</mdui-icon>
+                        <span>版本: <strong id="modVersion"></strong></span>
+                    </div>
+                </div>
+
+                <div class="stats-row">
+                    <div class="stat-item">
+                        <mdui-icon>download</mdui-icon>
+                        <span>下载量: <strong id="modDownloads"></strong></span>
+                    </div>
+                    <div class="stat-item">
+                        <mdui-icon>favorite</mdui-icon>
+                        <span>点赞数: <strong id="modLikes"></strong></span>
+                    </div>
+                    <div class="stat-item">
+                        <mdui-icon>calendar_today</mdui-icon>
+                        <span>发布时间: <strong id="modDate"></strong></span>
+                    </div>
+                </div>
+
+                <!-- 标签 -->
+                <div>
+                    <mdui-typography variant="title-medium" style="margin-bottom: 12px;">标签</mdui-typography>
+                    <div id="modTags" class="tag-list"></div>
+                </div>
+            </div>
+
+            <!-- 详细描述 -->
+            <div>
+                <mdui-typography variant="headline-small" style="margin-bottom: 16px;">模组介绍</mdui-typography>
+                <div id="modDescription" class="description-content"></div>
+            </div>
+
+            <!-- 截图展示 -->
+            <div>
+                <mdui-typography variant="headline-small" style="margin-bottom: 16px;">截图展示</mdui-typography>
+                <div id="screenshotsGrid" class="screenshot-grid">
+                    <!-- 截图将通过 JavaScript 动态生成 -->
+                </div>
+            </div>
+
+            <!-- 安装说明 -->
+            <div class="info-section">
+                <mdui-typography variant="headline-small" style="margin-bottom: 16px;">安装说明</mdui-typography>
+                <ol>
+                    <li>点击上方"下载模组"按钮下载模组文件</li>
+                    <li>解压下载的压缩文件到你的游戏模组文件夹</li>
+                    <li>确保游戏支持该类型的模组</li>
+                    <li>启动游戏并在模组管理器中启用该模组</li>
+                    <li>如果遇到问题，请查看模组的说明文档或联系作者</li>
+                </ol>
+            </div>
+
+            <!-- 评论区 -->
+            <div class="comments-section">
+                <mdui-typography variant="headline-small" style="margin-bottom: 24px;">评论 (<span id="commentsCount">0</span>)</mdui-typography>
+                
+                <!-- 评论输入框 -->
+                <div style="margin-bottom: 24px;">
+                    <mdui-text-field id="commentInput" placeholder="写下你的评论..." rows="3" style="width: 100%; margin-bottom: 12px;"></mdui-text-field>
+                    <mdui-button onclick="submitComment()" variant="filled">发表评论</mdui-button>
+                </div>
+
+                <!-- 评论列表 -->
+                <div id="commentsList">
+                    <!-- 评论将通过 JavaScript 动态生成 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 错误状态 -->
+        <div id="errorState" style="display: none; text-align: center; padding: 60px 20px;">
+            <mdui-icon style="font-size: 64px; color: #666;">error</mdui-icon>
+            <mdui-typography variant="headline-medium" style="margin: 16px 0;">模组未找到</mdui-typography>
+            <mdui-typography variant="body-large" style="color: #666; margin-bottom: 24px;">抱歉，您访问的模组可能已被删除或不存在。</mdui-typography>
+            <mdui-button onclick="goBack()" variant="filled">返回首页</mdui-button>
+        </div>
+    </main>
+
+    <!-- 图片预览对话框 -->
+    <mdui-dialog id="imageDialog" close-on-overlay-click>
+        <img id="previewImage" src="" alt="预览图片" style="width: 100%; height: auto; border-radius: 8px;">
+    </mdui-dialog>
+
+    <script>
+        let currentMod = null;
+        let currentModId = null;
+
+        // 获取URL参数
+        function getUrlParam(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', async function() {
+            currentModId = getUrlParam('id');
+            if (currentModId) {
+                await loadModDetails();
+            } else {
+                showErrorState();
+            }
+        });
+
+        // 加载模组详情
+        async function loadModDetails() {
+            try {
+                const response = await fetch(`/api/mods/${currentModId}`);
+                if (response.ok) {
+                    currentMod = await response.json();
+                    displayModDetails();
+                    generateScreenshots();
+                    loadComments();
+                } else {
+                    showErrorState();
+                }
+            } catch (error) {
+                console.error('加载模组详情失败:', error);
+                showErrorState();
+            }
+        }
+
+        // 显示模组详情
+        function displayModDetails() {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('modContent').style.display = 'block';
+
+            // 填充基本信息
+            document.getElementById('modImage').src = currentMod.image;
+            document.getElementById('modImage').alt = currentMod.name;
+            document.getElementById('modTitle').textContent = currentMod.name;
+            document.getElementById('modSubtitle').textContent = `由 ${currentMod.author} 创建的 ${currentMod.game} 模组`;
+            document.getElementById('modGame').textContent = currentMod.game;
+            document.getElementById('modAuthor').textContent = currentMod.author;
+            document.getElementById('modVersion').textContent = currentMod.version;
+            document.getElementById('modDownloads').textContent = currentMod.downloads.toLocaleString();
+            document.getElementById('modLikes').textContent = currentMod.likes;
+            document.getElementById('modDate').textContent = currentMod.createdAt;
+
+            // 填充描述
+            document.getElementById('modDescription').innerHTML = currentMod.description.replace(/\n/g, '<br>');
+
+            // 填充标签
+            const tagsContainer = document.getElementById('modTags');
+            tagsContainer.innerHTML = '';
+            currentMod.tags.forEach(tag => {
+                const tagChip = document.createElement('mdui-chip');
+                tagChip.textContent = tag;
+                tagsContainer.appendChild(tagChip);
+            });
+
+            // 设置下载按钮
+            document.getElementById('downloadBtn').onclick = () => downloadMod();
+        }
+
+        // 生成模拟截图
+        function generateScreenshots() {
+            const screenshotsGrid = document.getElementById('screenshotsGrid');
+            screenshotsGrid.innerHTML = '';
+
+            // 生成一些模拟截图
+            const screenshotCount = 4;
+            for (let i = 1; i <= screenshotCount; i++) {
+                const screenshotItem = document.createElement('div');
+                screenshotItem.className = 'screenshot-item';
+                screenshotItem.onclick = () => previewImage(`https://picsum.photos/seed/screenshot${currentModId}-${i}/800/600.jpg`);
+                
+                screenshotItem.innerHTML = `
+                    <img src="https://picsum.photos/seed/screenshot${currentModId}-${i}/400/300.jpg" alt="截图 ${i}">
+                `;
+                
+                screenshotsGrid.appendChild(screenshotItem);
+            }
+        }
+
+        // 预览图片
+        function previewImage(imageSrc) {
+            document.getElementById('previewImage').src = imageSrc;
+            document.getElementById('imageDialog').open = true;
+        }
+
+        // 加载评论（模拟数据）
+        function loadComments() {
+            const mockComments = [
+                {
+                    id: 1,
+                    author: '玩家小王',
+                    avatar: 'https://picsum.photos/seed/user1/40/40.jpg',
+                    content: '这个模组太棒了！效果非常好，强烈推荐给大家！',
+                    time: '2024-03-15 14:30',
+                    likes: 12
+                },
+                {
+                    id: 2,
+                    author: '模组爱好者',
+                    avatar: 'https://picsum.photos/seed/user2/40/40.jpg',
+                    content: '安装简单，功能强大，作者的用心之作。',
+                    time: '2024-03-14 09:15',
+                    likes: 8
+                },
+                {
+                    id: 3,
+                    author: '游戏达人',
+                    avatar: 'https://picsum.photos/seed/user3/40/40.jpg',
+                    content: '用了几天了，很稳定，没有任何问题。希望能继续更新！',
+                    time: '2024-03-13 16:45',
+                    likes: 15
+                }
+            ];
+
+            displayComments(mockComments);
+        }
+
+        // 显示评论
+        function displayComments(comments) {
+            const commentsList = document.getElementById('commentsList');
+            const commentsCount = document.getElementById('commentsCount');
+            
+            commentsCount.textContent = comments.length;
+            commentsList.innerHTML = '';
+
+            comments.forEach(comment => {
+                const commentItem = document.createElement('div');
+                commentItem.className = 'comment-item';
+                
+                commentItem.innerHTML = `
+                    <div class="comment-header">
+                        <mdui-avatar src="${comment.avatar}" alt="${comment.author}"></mdui-avatar>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 500;">${comment.author}</div>
+                            <div style="font-size: 12px; color: #666;">${comment.time}</div>
+                        </div>
+                        <mdui-button-icon icon="thumb_up" onclick="likeComment(${comment.id})" title="点赞"></mdui-button-icon>
+                    </div>
+                    <div style="margin-left: 52px;">
+                        <mdui-typography variant="body-medium">${comment.content}</mdui-typography>
+                        <div style="font-size: 12px; color: #666; margin-top: 4px;">${comment.likes} 人觉得有用</div>
+                    </div>
+                `;
+                
+                commentsList.appendChild(commentItem);
+            });
+        }
+
+        // 下载模组
+        function downloadMod() {
+            if (currentMod && currentMod.fileUrl) {
+                // 创建一个临时的下载链接
+                const link = document.createElement('a');
+                link.href = currentMod.fileUrl;
+                link.download = `${currentMod.name}_v${currentMod.version}.zip`;
+                link.click();
+
+                // 显示成功消息
+                showSnackbar('下载已开始！');
+
+                // 模拟下载计数增加
+                currentMod.downloads += 1;
+                document.getElementById('modDownloads').textContent = currentMod.downloads.toLocaleString();
+            } else {
+                showSnackbar('下载链接不可用', 'error');
+            }
+        }
+
+        // 点赞模组
+        async function likeMod() {
+            if (!currentMod) return;
+
+            try {
+                const response = await fetch(`/api/mods/${currentMod.id}/like`, { method: 'POST' });
+                const data = await response.json();
+                
+                currentMod.likes = data.likes;
+                document.getElementById('modLikes').textContent = currentMod.likes;
+                
+                const likeBtn = document.getElementById('likeBtn');
+                likeBtn.variant = 'filled';
+                likeBtn.style.color = '#e91e63';
+                document.getElementById('likeText').textContent = '已点赞';
+                
+                showSnackbar('点赞成功！');
+            } catch (error) {
+                console.error('点赞失败:', error);
+                showSnackbar('点赞失败', 'error');
+            }
+        }
+
+        // 发表评论
+        function submitComment() {
+            const commentInput = document.getElementById('commentInput');
+            const content = commentInput.value.trim();
+            
+            if (!content) {
+                showSnackbar('请输入评论内容', 'error');
+                return;
+            }
+
+            // 模拟添加评论
+            const newComment = {
+                id: Date.now(),
+                author: '当前用户',
+                avatar: 'https://picsum.photos/seed/currentuser/40/40.jpg',
+                content: content,
+                time: new Date().toLocaleString('zh-CN'),
+                likes: 0
+            };
+
+            // 重新加载评论
+            loadComments();
+            
+            // 清空输入框
+            commentInput.value = '';
+            showSnackbar('评论发表成功！');
+        }
+
+        // 点赞评论
+        function likeComment(commentId) {
+            showSnackbar('评论点赞成功！');
+        }
+
+        // 显示错误状态
+        function showErrorState() {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('errorState').style.display = 'block';
+        }
+
+        // 返回上一页
+        function goBack() {
+            window.history.back();
+        }
+
+        // 举报模组
+        function reportMod() {
+            const dialog = document.createElement('mdui-dialog');
+            dialog.headline = '举报模组';
+            dialog.innerHTML = `
+                <div style="padding: 20px;">
+                    <mdui-typography variant="body-medium" style="margin-bottom: 16px;">
+                        请选择举报原因：
+                    </mdui-typography>
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <mdui-radio-group value="inappropriate">
+                            <mdui-radio value="inappropriate">内容不当</mdui-radio>
+                            <mdui-radio value="spam">垃圾信息</mdui-radio>
+                            <mdui-radio value="copyright">版权问题</mdui-radio>
+                            <mdui-radio value="broken">模组损坏</mdui-radio>
+                            <mdui-radio value="other">其他原因</mdui-radio>
+                        </mdui-radio-group>
+                    </div>
+                    <mdui-text-field 
+                        id="reportReason" 
+                        label="详细说明（可选）" 
+                        rows="3" 
+                        style="width: 100%; margin-top: 16px;"
+                        placeholder="请提供更多详细信息..."
+                    ></mdui-text-field>
+                </div>
+                <mdui-button slot="action" onclick="this.parentElement.close()">取消</mdui-button>
+                <mdui-button slot="action" onclick="submitReport()" variant="filled">提交举报</mdui-button>
+            `;
+            
+            document.body.appendChild(dialog);
+            dialog.open = true;
+            
+            // 添加提交举报功能到全局作用域
+            window.submitReport = function() {
+                const radioGroup = dialog.querySelector('mdui-radio-group');
+                const reasonInput = document.getElementById('reportReason');
+                const reason = radioGroup.value;
+                const details = reasonInput.value;
+                
+                if (!reason) {
+                    showSnackbar('请选择举报原因', 'error');
+                    return;
+                }
+                
+                // 模拟提交举报
+                console.log('举报提交:', {
+                    modId: currentMod.id,
+                    modName: currentMod.name,
+                    reason: reason,
+                    details: details,
+                    timestamp: new Date().toISOString()
+                });
+                
+                dialog.close();
+                showSnackbar('举报已提交，我们会尽快处理');
+                
+                // 清理全局函数
+                delete window.submitReport;
+            };
+        }
+
+        // 显示提示消息
+        function showSnackbar(message, type = 'success') {
+            const snackbar = document.createElement('mdui-snackbar');
+            snackbar.position = 'top';
+            snackbar.message = message;
+            
+            if (type === 'error') {
+                snackbar.style.setProperty('--mdui-color-snackbar-container', '#f44336');
+            }
+            
+            document.body.appendChild(snackbar);
+            snackbar.open = true;
+            
+            setTimeout(() => {
+                document.body.removeChild(snackbar);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
